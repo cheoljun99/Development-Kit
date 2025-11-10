@@ -44,9 +44,10 @@
 
 class alignas(64) RWSpinLock {
 private:
-    std::atomic<uint32_t> state_=0;
+    std::atomic<uint32_t> state_;
 
 public:
+    RWSpinLock():state_(0){};
     // Acquire shared (reader) lock
     inline void lock_shared() {
         uint32_t  old;
