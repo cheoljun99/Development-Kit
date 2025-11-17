@@ -2,7 +2,7 @@
  * Vyukov Bounded MPMC Lock-Free Queue (Byte Buffer Version)
  *
  * 본 구현은 Dmitry Vyukov가 설계한 bounded MPMC(lock-free, multiple-producer multiple-consumer) 큐 알고리즘을
- * 원형 버퍼(ring buffer) 기반으로 완전히 준수한 버전이다.
+ * 원형 버퍼(ring buffer) 기반으로 준수한 버전이다.
  *
  * 특징:
  *  - 다중 producer, 다중 consumer 환경에서 완전한 lock-free 보장
@@ -17,8 +17,8 @@
  *  - enqueue()/dequeue()는 busy-spin 기반이며, 필요 시 _mm_pause() 또는 yield() 추가 권장
  *  - 큐 파괴 시점에는 모든 producer/consumer 스레드 종료가 보장되어야 함
  *
- * 본 코드는 프로덕션 수준 동시성 안전성을 가지며, Folly·rigtorp·moodycamel 등
- * 산업용 MPMC 큐 구현과 동등한 정합성을 제공한다.
+ * 본 코드는 Dmitry Vyukov의 공개 알고리즘을 기반으로 한 구현이며,
+ * Folly, rigtorp, moodycamel 등의 lock-free 큐와 동일한 알고리즘이다.
  */
 
 #pragma once

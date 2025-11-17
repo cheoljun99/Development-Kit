@@ -35,8 +35,8 @@
  *    리소스 해제 로직은 항상 idempotent(중복 호출 시 동일한 결과를 유지)해야 한다.
  *  - thread_func() 내부에서 발생한 예외는 잡아 처리되며, 시스템 오류로 확산되지 않는다.
  *
- * 본 클래스는 POSIX 표준 pthread API를 기반으로 한 독립적 관리 객체이며,
- * 시스템 수준의 스레드 관리 및 자원 해제를 안전하고 예측 가능하게 수행하기 위한 참조 구현이다.
+ * 본 클래스는 POSIX 표준 pthread API를 기반으로 한 객체이며,
+ * 스레드 관리 및 자원 해제를 안전하게 수행하기 위한 예시 구현이다.
  */
 
 #pragma once
@@ -47,13 +47,13 @@
 #include <iostream>
 #include <cstring>
 #include <unistd.h>
+#include "thread.h"
 
-class Pthread {
+class Pthread : public Thread{
 private:
-	pthread_t thread_id_ = 0;
-	std::atomic<bool> thread_term_;
+	pthread_t thread_id_;
 public:
-	Pthread() : thread_term_(false) {}
+	Pthread() : thread_id_(0) {}
 	~Pthread() { stop_thread(); }
 	bool start_thread() {
 		if (thread_id_ != 0) {
@@ -85,20 +85,8 @@ public:
 		}
 		cleanup();
 	}
-	bool get_thread_term() { return thread_term_.load();}
 private:
 	bool setup();
 	void cleanup();
-	static void* thread_func(void* arg) {
-		Pthread* self = static_cast<Pthread*>(arg);
-		std::cout << "thread(PID :" << getpid() << ", TID :" << gettid() << ") start..." << '\n';
-		try { self->thread_loop(); }
-		catch (const std::exception& e) {
-			std::cerr << "[EXCEPT] pthread exception: " << e.what() << '\n';
-			self->thread_term_.store(true);
-		}
-		std::cout << "VPN server thread(PID :" << getpid() << ", TID :" << gettid() << ") stop!!!" << '\n';
-		return nullptr;
-	}
 	void thread_loop();
 };

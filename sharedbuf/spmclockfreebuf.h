@@ -20,8 +20,8 @@
  *    필요 시 _mm_pause() 또는 std::this_thread::yield() 삽입 권장.
  *  - 큐가 파괴될 때는 모든 producer / consumer 스레드가 종료된 상태여야 한다.
  *
- * 본 코드는 Dmitry Vyukov의 공개 알고리즘을 기반으로 한 독자 구현이며,
- * Folly, rigtorp, moodycamel 등 산업 수준의 lock-free 큐와 동일한 정합성을 제공한다.
+ * 본 코드는 Dmitry Vyukov의 공개 알고리즘을 기반으로 한 구현이며,
+ * Folly, rigtorp, moodycamel 등의 lock-free 큐와 동일한 알고리즘이다.
  */
 
 #pragma once
