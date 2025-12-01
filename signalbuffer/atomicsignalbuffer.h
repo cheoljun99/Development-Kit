@@ -33,26 +33,27 @@
 
 class AtomicSignalBuffer : public SignalBuffer {
     std::atomic<int> flag_;
-
+    std::atomic<bool> wake_all_flag_;
 public:
-    AtomicSignalBuffer(std::unique_ptr<SharedBuffer> shared_buf) : SignalBuffer(std::move(shared_buf)), flag_(0) {}
+    AtomicSignalBuffer(std::unique_ptr<SharedBuffer> shared_buf) : SignalBuffer(std::move(shared_buf)), flag_(0),wake_all_flag_(false) {}
 
     int32_t enqueue_wake(const uint8_t* data, size_t len) override {
         int32_t n = shared_buf_->enqueue(data, len);
         if (n >=0) {
-            flag_.store(1, std::memory_order_relaxed);
+            flag_.store(1, std::memory_order_release);
             flag_.notify_one();  
         }
         else{
             std::cout << "shared_buf_ is pull " << '\n';
-            flag_.store(1, std::memory_order_relaxed);
+            flag_.store(1, std::memory_order_release);
             flag_.notify_one();
         }
         return n; // -1: full
     }
 
     void wake_all() override {
-        flag_.store(1, std::memory_order_relaxed);
+        wake_all_flag_.store(true,std::memory_order_release);
+        flag_.store(1, std::memory_order_release);
         flag_.notify_all();
     }
 
@@ -60,10 +61,15 @@ public:
         int32_t n = shared_buf_->dequeue(out, len);
         if (n >= 0) return n;
         int expected = 1;
-        if (!flag_.compare_exchange_strong(expected, 0, std::memory_order_relaxed, std::memory_order_relaxed)) {
+        if(wake_all_flag_.load(std::memory_order_acquire)==true){
+            flag_.store(1, std::memory_order_release);
+            flag_.notify_all();
+            return -1;
+        }
+        if (!flag_.compare_exchange_strong(expected, 0, std::memory_order_release, std::memory_order_relaxed)) {
             // flag가 1이면 0으로 바꾸고 true 반환하고 이것이 반전됨 wait 건너뜀
             // flag가 0이면 0으로 유지하고 false 반환하고 이것이 반전됨 wait 들어감 
-            flag_.wait(0);
+            flag_.wait(0, std::memory_order_acquire);
         }
         return -1;
     }

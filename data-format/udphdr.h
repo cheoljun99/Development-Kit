@@ -65,6 +65,46 @@ struct UdpHdr final {
             ret = (ret & 0xFFFF) + (ret >> 16);
         return htons((~ret) ? static_cast<uint16_t>(~ret) : 0xFFFF);
     }
+    static bool verify_checksum(IpHdr* iphdr, UdpHdr* udphdr) {
+        uint32_t ret = 0;
+        int udp_len = udphdr->len();
+        int udp_payload_len = udp_len - sizeof(UdpHdr);
+        const int pseudohdr_len = 12;
+        uint8_t buf[pseudohdr_len] = {0};
+        uint32_t sip = ntohl(iphdr->sip_);
+        uint32_t dip = ntohl(iphdr->dip_);
+        buf[0] = (sip >> 24) & 0xFF;
+        buf[1] = (sip >> 16) & 0xFF;
+        buf[2] = (sip >> 8) & 0xFF;
+        buf[3] = sip & 0xFF;
+        buf[4] = (dip >> 24) & 0xFF;
+        buf[5] = (dip >> 16) & 0xFF;
+        buf[6] = (dip >> 8) & 0xFF;
+        buf[7] = dip & 0xFF;
+        buf[8]  = 0;
+        buf[9]  = iphdr->proto_;
+        buf[10] = (udp_len >> 8) & 0xFF;
+        buf[11] = udp_len & 0xFF;
+        for (int i = 0; i < pseudohdr_len - 1; i += 2) {
+            ret += (buf[i] << 8) + buf[i + 1];
+        }
+        if (pseudohdr_len & 1) ret += buf[pseudohdr_len - 1] << 8;
+        uint8_t* udphdr_pword = reinterpret_cast<uint8_t*>(udphdr);
+        for (int i = 0; i < static_cast<int>(sizeof(UdpHdr)) - 1; i += 2) {
+            ret += (udphdr_pword[i] << 8) + udphdr_pword[i + 1];
+        }
+        if (sizeof(UdpHdr) & 1) ret += udphdr_pword[sizeof(UdpHdr) - 1] << 8;
+        uint8_t* udp_payload_pword = reinterpret_cast<uint8_t*>(udphdr) + sizeof(UdpHdr);
+        for (int i = 0; i < udp_payload_len - 1; i += 2) {
+            ret += (udp_payload_pword[i] << 8) + udp_payload_pword[i + 1];
+        }
+        if (udp_payload_len & 1) ret += udp_payload_pword[udp_payload_len - 1] << 8;
+        while (ret >> 16) {
+            ret = (ret & 0xFFFF) + (ret >> 16);
+        }
+        return (ret == 0xFFFF);
+    }
+
 };
 typedef UdpHdr* PUdpHdr;
 #pragma pack(pop)

@@ -89,6 +89,46 @@ struct TcpHdr final {
             ret = (ret & 0xFFFF) + (ret >> 16);
         return htons((~ret) ? static_cast<uint16_t>(~ret) : 0xFFFF);
     }
+    static bool verify_checksum(IpHdr* iphdr, TcpHdr* tcphdr) {
+        uint32_t ret = 0;
+        int tcphdr_len = tcphdr->dataOffset() * 4;
+        uint16_t tcp_payload_len = iphdr->totalLen() - (iphdr->hdrLen() * 4) - tcphdr_len;
+        int tcp_len = tcphdr_len + tcp_payload_len;
+        const int pseudohdr_len = 12;
+        uint8_t buf[pseudohdr_len] = {0};
+        uint32_t sip = iphdr->sip();
+        uint32_t dip = iphdr->dip();
+        buf[0] = (sip >> 24) & 0xFF;
+        buf[1] = (sip >> 16) & 0xFF;
+        buf[2] = (sip >> 8) & 0xFF;
+        buf[3] = sip & 0xFF;
+        buf[4] = (dip >> 24) & 0xFF;
+        buf[5] = (dip >> 16) & 0xFF;
+        buf[6] = (dip >> 8) & 0xFF;
+        buf[7] = dip & 0xFF;
+        buf[8]  = 0;
+        buf[9]  = iphdr->proto_;
+        buf[10] = (tcp_len >> 8) & 0xFF;
+        buf[11] = tcp_len & 0xFF;
+        for (int i = 0; i < pseudohdr_len - 1; i += 2) {
+            ret += (buf[i] << 8) + buf[i + 1];
+        }
+        if (pseudohdr_len & 1) ret += buf[pseudohdr_len - 1] << 8;
+        uint8_t* tcphdr_pword = reinterpret_cast<uint8_t*>(tcphdr);
+        for (int i = 0; i < tcphdr_len - 1; i += 2) {
+            ret += (tcphdr_pword[i] << 8) + tcphdr_pword[i + 1];
+        }
+        if (tcphdr_len & 1) ret += tcphdr_pword[tcphdr_len - 1] << 8;
+        uint8_t* tcp_payload_pword = reinterpret_cast<uint8_t*>(tcphdr) + tcphdr_len;
+        for (int i = 0; i < tcp_payload_len - 1; i += 2) {
+            ret += (tcp_payload_pword[i] << 8) + tcp_payload_pword[i + 1];
+        }
+        if (tcp_payload_len & 1) ret += tcp_payload_pword[tcp_payload_len - 1] << 8;
+        while (ret >> 16) {
+            ret = (ret & 0xFFFF) + (ret >> 16);
+        }
+        return (ret == 0xFFFF);
+    }
 };
 typedef TcpHdr* PTcpHdr;
 #pragma pack(pop)

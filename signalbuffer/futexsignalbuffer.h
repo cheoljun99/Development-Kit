@@ -26,16 +26,17 @@
 
  
 #pragma once
-#include <stdatomic.h>
+#include <atomic>
 #include <sys/syscall.h>
 #include <linux/futex.h>
 #include <unistd.h>
 #include <cstdint>
 #include <climits>
+#include <iostream>
 #include "signalbuffer.h"
 
 class FutexSignalBuffer : public SignalBuffer{
-    alignas(4) atomic_int flag_;
+    alignas(4) std::atomic<int> flag_;
 
 public:
     FutexSignalBuffer(std::unique_ptr<SharedBuffer> shared_buf) : SignalBuffer(std::move(shared_buf)), flag_(0) {}
@@ -43,19 +44,19 @@ public:
     int32_t enqueue_wake(const uint8_t* data, size_t len) override{
         int32_t n = shared_buf_->enqueue(data, len);
         if (n >=0) {
-            atomic_store_explicit(&flag_, 1, memory_order_relaxed);
+            atomic_store_explicit(&flag_, 1, std::memory_order_release);
             syscall(SYS_futex, &flag_, FUTEX_WAKE, 1, nullptr, nullptr, 0);
         }
         else{
             std::cout << "shared_buf_ is pull " << '\n';
-            atomic_store_explicit(&flag_, 1, memory_order_relaxed);
+            atomic_store_explicit(&flag_, 1, std::memory_order_release);
             syscall(SYS_futex, &flag_, FUTEX_WAKE, 1, nullptr, nullptr, 0);
         }
         return n; // -1: full
     }
 
     void wake_all() override{
-        atomic_store_explicit(&flag_, 1, memory_order_relaxed);
+        atomic_store_explicit(&flag_, 1, std::memory_order_release);
         syscall(SYS_futex, &flag_, FUTEX_WAKE, INT_MAX, nullptr, nullptr, 0);
     }
 
@@ -63,7 +64,7 @@ public:
         int32_t n = shared_buf_->dequeue(out, len);
         if (n >= 0) return n;
         int expected = 1;
-        if (!atomic_compare_exchange_strong(&flag_, &expected, 0, memory_order_relaxed, memory_order_relaxed)) {
+        if (!atomic_compare_exchange_strong_explicit(&flag_, &expected, 0, std::memory_order_release, std::memory_order_relaxed)) {
             // flag가 1이면 0으로 바꾸고 true 반환하고 이것이 반전됨 syscall 건너뜀
             // flag가 0이면 0으로 유지하고 false 반환하고 이것이 반전됨 syscall 들어감 
             syscall(SYS_futex, &flag_, FUTEX_WAIT, 0, nullptr, nullptr, 0);

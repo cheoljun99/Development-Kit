@@ -8,7 +8,7 @@
 #include "thread.h"
 
 class STDThread : public Thread {
-private:
+protected:
     std::thread thread_;
 public:
     bool start_thread() {
@@ -22,13 +22,13 @@ public:
             cleanup();
             return false;
         }
-        thread_ = std::thread(&STDThread::thread_func, this);
+        thread_ = std::thread(&Thread::thread_func, this);
         return true;
     }
-    void stop_thread() {
+    virtual void stop_thread() {
         if (thread_.joinable()) {
-            if (!thread_term_.load()) {
-                thread_term_.store(true);
+            if (thread_term_.load(std::memory_order_acquire)==false) {
+                thread_term_.store(true, std::memory_order_release);
             }
             thread_.join();
         }
@@ -40,7 +40,7 @@ public:
         return static_cast<uint64_t>(hasher(thread_.get_id()));
     }
     virtual ~STDThread() {};
-private:
+protected:
     virtual bool setup() = 0;
     virtual void cleanup() = 0;
     virtual void thread_loop() = 0;

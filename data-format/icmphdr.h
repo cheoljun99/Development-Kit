@@ -38,6 +38,20 @@ struct IcmpHdr {
         return htons(static_cast<uint16_t>(~ret));
     }
 
+    static bool verify_checksum(IpHdr* iphdr, IcmpHdr* icmph) {
+        uint32_t ret = 0;
+        int16_t icmp_len = iphdr->totalLen() - (iphdr->hdrLen() * 4);
+        uint8_t* pword = reinterpret_cast<uint8_t*>(icmph);
+        for (int i = 0; i < icmp_len - 1; i += 2) {
+            ret += (pword[i] << 8) + pword[i + 1];
+        }
+        if (icmp_len & 1) ret += pword[icmp_len - 1] << 8;
+        while (ret >> 16) {
+            ret = (ret & 0xFFFF) + (ret >> 16);
+        }
+        return (ret == 0xFFFF);
+    }
+
     enum Type : uint8_t {
         DestinationUnreachable = 3
     };

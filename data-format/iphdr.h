@@ -36,7 +36,7 @@ struct IpHdr final {
     uint16_t checksum() const { return ntohs(checksum_); }
 	Ip sip() const { return Ip(ntohl(sip_)); }
 	Ip dip() const { return Ip(ntohl(dip_)); }
-	static uint16_t calc_checksum( IpHdr* iphdr) {
+	static uint16_t calc_checksum(IpHdr* iphdr) {
         uint32_t ret = 0;
         iphdr->checksum_=0;
         int iph_len = iphdr->hdrLen()*4;
@@ -49,6 +49,19 @@ struct IpHdr final {
             ret = (ret & 0xFFFF) + (ret >> 16);
         return htons(static_cast<uint16_t>(~ret));
     }
+	static bool verify_checksum(IpHdr* iphdr) {
+		uint32_t ret = 0;
+		int iphdr_len = iphdr->hdrLen() * 4;
+		uint16_t* pword = reinterpret_cast<uint16_t*>(iphdr);
+		for (int i = 0; i < iphdr_len / 2; ++i) {
+			ret += ntohs(*pword);
+			pword++;
+		}
+		while (ret >> 16) {
+			ret = (ret & 0xFFFF) + (ret >> 16);
+		}
+		return (ret == 0xFFFF);
+	}
 
 	enum Flag : uint16_t {
 		RF = 0x8000,
