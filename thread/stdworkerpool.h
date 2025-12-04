@@ -19,7 +19,7 @@ public:
         stop_pool();
     }
     bool monitor_pool(){
-        if(start_flag_.load()==false){
+        if(start_flag_==false){
             std::cerr << "[ERROR] don't start thread pool "
 			<< "(STDWorkerPool::monitor_pool) " << '\n';
             return false;

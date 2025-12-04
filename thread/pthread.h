@@ -23,6 +23,7 @@ public:
 			cleanup();
 			return false;
 		}
+		thread_term_.store(false, std::memory_order_release);
 		if (pthread_create(&thread_id_, nullptr, thread_func, this) != 0) {
 			std::cerr << "[ERROR] pthread_create PThread : "
 			<< strerror(errno)
@@ -34,7 +35,7 @@ public:
 	}
 	void stop_thread() {
 		if (thread_id_ != 0) {
-			if (!thread_term_.load()) { thread_term_.store(true); }
+			if (!thread_term_.load(std::memory_order_acquire)) { thread_term_.store(true, std::memory_order_release); }
 			if (pthread_join(thread_id_, nullptr) != 0) {
 				std::cerr << "[ERROR] pthread_join : " << strerror(errno) << " "
 				<< "(PThread::start_thread) " << '\n';

@@ -22,6 +22,7 @@ public:
             cleanup();
             return false;
         }
+        thread_term_.store(false, std::memory_order_release);
         thread_ = std::thread(&Thread::thread_func, this);
         return true;
     }
