@@ -10,6 +10,8 @@
 #include "ethhdr.h"
     #if defined(_WIN32) || defined(_WIN64)
         // Windows 헤더
+        #include <winsock2.h>
+        #pragma comment(lib, "ws2_32.lib")
     #elif defined(__linux__)
         // 리눅스 헤더
         #include <unistd.h>
@@ -20,7 +22,8 @@
     #endif
 namespace OsUtil {
     #if defined(_WIN32) || defined(_WIN64)
-
+        SOCKET get_tcp_socket_fd(Ip source_ip, uint16_t source_port);
+        SOCKET get_udp_socket_fd(Ip source_ip, uint16_t source_port);
     #elif defined(__linux__)
         // Utility 명령어 사용 함수
         int exec_cmd_util(const std::vector<std::string>& args);

@@ -35,6 +35,41 @@
 
 #if defined(_WIN32) || defined(_WIN64)
     //Windows 함수
+    SOCKET get_tcp_socket_fd(Ip source_ip, uint16_t source_port) {
+        SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock == INVALID_SOCKET) {
+            std::cout << "[ERROR] Socket creation failed : " << WSAGetLastError()<<" "<<"\n";
+            return INVALID_SOCKET;
+        }
+        struct sockaddr_in serverAddr;
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_addr.s_addr = htonl(source_ip);
+        serverAddr.sin_port = htons(source_port);
+        if (bind(sock, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+            std::cout << "[ERROR] Bind failed : " << WSAGetLastError() << " " << "\n";
+            closesocket(sock);
+            return INVALID_SOCKET;
+        }
+        return sock;
+    }
+    SOCKET get_udp_socket_fd(Ip source_ip, uint16_t source_port) {
+        SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+        if (sock == INVALID_SOCKET) {
+            std::cout << "[ERROR] Socket creation failed : " << WSAGetLastError() << " " << "\n";
+            return INVALID_SOCKET;
+        }
+        struct sockaddr_in serverAddr;
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_addr.s_addr = htonl(source_ip);
+        serverAddr.sin_port = htons(source_port);
+        if (bind(sock, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+            std::cout << "[ERROR] Bind failed : " << WSAGetLastError() << " " << "\n";
+            closesocket(sock);
+            return INVALID_SOCKET;
+        }
+        return sock;
+    }
+
 #elif defined(__linux__)
     //Linux 함수
     int OsUtil::exec_cmd_util(const std::vector<std::string>& args) {
