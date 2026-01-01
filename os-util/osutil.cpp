@@ -588,8 +588,6 @@
             std::cerr << "[ERROR] socket(AF_CAN, SOCK_RAW, CAN_RAW): " << strerror(errno) << "\n";
             return -1;
         }
-        int enable_canfd = 1;
-        setsockopt(can_socket_fd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd));
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, source_nic, IFNAMSIZ - 1);
@@ -609,6 +607,35 @@
             return -1;
         }
         return can_socket_fd;
+    }
+
+    int OsUtil::get_canfd_socket_fd(const char* source_nic) {
+        int canfd_socket_fd = socket(AF_CAN, SOCK_RAW, CAN_RAW);
+        if (canfd_socket_fd < 0) {
+            std::cerr << "[ERROR] socket(AF_CAN, SOCK_RAW, CAN_RAW): " << strerror(errno) << "\n";
+            return -1;
+        }
+        int enable_canfd = 1;
+        setsockopt(canfd_socket_fd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd));
+        struct ifreq ifr;
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, source_nic, IFNAMSIZ - 1);
+        ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+        if (ioctl(canfd_socket_fd, SIOCGIFINDEX, &ifr) < 0) {
+            std::cerr << "[ERROR] ioctl(SIOCGIFINDEX): " << strerror(errno) << "\n";
+            close(canfd_socket_fd);
+            return -1;
+        }
+        struct sockaddr_can addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.can_family = AF_CAN;
+        addr.can_ifindex = ifr.ifr_ifindex;
+        if (bind(canfd_socket_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            std::cerr << "[ERROR] bind CAN socket: " << strerror(errno) << "\n";
+            close(canfd_socket_fd);
+            return -1;
+        }
+        return canfd_socket_fd;
     }
 
     

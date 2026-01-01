@@ -77,6 +77,8 @@ namespace OsUtil {
         int get_port_from_l4_socket_fd(int l4_socket_fd);
         // can 소켓 fd 할당 함수
         int get_can_socket_fd(const char* source_nic);
+        // canfd 소켓 fd 할당 함수
+        int get_canfd_socket_fd(const char* source_nic);
 
     #endif
 
